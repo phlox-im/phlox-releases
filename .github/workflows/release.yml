@@ -30,9 +30,10 @@ jobs:
           curl -fsSL -o "Phlox-$V.apk" "https://dl.phlox.im/Phlox-$V.apk"
           echo "$SHA  Phlox-$V.apk" | sha256sum -c -
           BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
-          SIGNED=$("$BT/apksigner" verify --print-certs "Phlox-$V.apk" | grep -m1 "Signer #1 certificate SHA-256 digest:" | awk '{print $NF}')
+          OUT=$("$BT/apksigner" verify --print-certs "Phlox-$V.apk" 2>/dev/null || true)
+          SIGNED=$(echo "$OUT" | grep -m1 "certificate SHA-256 digest:" | awk '{print $NF}')
           WANT=$(echo "$SIGNER" | tr -d : | tr A-F a-f)
-          [ -n "$SIGNED" ] && [ "$SIGNED" = "$WANT" ] || { echo "signing key mismatch: $SIGNED"; exit 1; }
+          [ -n "$SIGNED" ] && [ "$SIGNED" = "$WANT" ] || { echo "signing key mismatch: $SIGNED"; echo "$OUT"; exit 1; }
           echo "signing key OK"
       - name: Release
         run: |
