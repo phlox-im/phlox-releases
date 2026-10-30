@@ -27,18 +27,20 @@ Lose your wallet, and nobody can restore your account.
 
 Every release lists two fingerprints. Both must match.
 
+In the commands below, use the name of the file you downloaded instead of `Phlox-VERSION.apk`.
+
 **1. SHA-256 of the file** — shows the download is complete and unchanged.
 
 Windows (PowerShell):
 
 ```
-Get-FileHash Phlox-0.118.0.apk -Algorithm SHA256
+Get-FileHash Phlox-VERSION.apk -Algorithm SHA256
 ```
 
 macOS / Linux:
 
 ```
-shasum -a 256 Phlox-0.118.0.apk
+shasum -a 256 Phlox-VERSION.apk
 ```
 
 **2. Signing key fingerprint** — shows the app is signed with the Phlox key. It is the same for every release:
@@ -50,7 +52,7 @@ shasum -a 256 Phlox-0.118.0.apk
 Check it with `apksigner` from the Android SDK build tools:
 
 ```
-apksigner verify --print-certs Phlox-0.118.0.apk
+apksigner verify --print-certs Phlox-VERSION.apk
 ```
 
 The line `Signer #1 certificate SHA-256 digest` must show the same value (without colons, in lower case).
