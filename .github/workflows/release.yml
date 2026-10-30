@@ -29,8 +29,11 @@ jobs:
           [[ "$SHA" =~ ^[0-9a-f]{64}$ ]] || { echo "bad sha256"; exit 1; }
           curl -fsSL -o "Phlox-$V.apk" "https://dl.phlox.im/Phlox-$V.apk"
           echo "$SHA  Phlox-$V.apk" | sha256sum -c -
-          SIGNED=$(keytool -printcert -jarfile "Phlox-$V.apk" | grep -m1 "SHA256:" | awk '{print $2}')
-          [ "$SIGNED" = "$SIGNER" ] || { echo "signing key mismatch: $SIGNED"; exit 1; }
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          SIGNED=$("$BT/apksigner" verify --print-certs "Phlox-$V.apk" | grep -m1 "Signer #1 certificate SHA-256 digest:" | awk '{print $NF}')
+          WANT=$(echo "$SIGNER" | tr -d : | tr A-F a-f)
+          [ -n "$SIGNED" ] && [ "$SIGNED" = "$WANT" ] || { echo "signing key mismatch: $SIGNED"; exit 1; }
+          echo "signing key OK"
       - name: Release
         run: |
           MB=$(awk "BEGIN { printf \"%.1f\", $(stat -c %s "Phlox-$V.apk") / 1000000 }")
