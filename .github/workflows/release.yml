@@ -1,0 +1,53 @@
+name: release
+
+# Publishes one Phlox release: downloads the APK from dl.phlox.im, checks its SHA-256, creates the release.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, e.g. 0.118.0"
+        required: true
+      sha256:
+        description: "SHA-256 of the APK"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      V: ${{ inputs.version }}
+      SHA: ${{ inputs.sha256 }}
+      SIGNER: "5F:92:F1:DC:B7:63:BD:4E:C2:A2:34:51:81:AD:2E:FB:02:25:E1:B6:66:D6:13:8D:92:F7:55:E6:CB:E1:64:DE"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download and check
+        run: |
+          [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "bad version"; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{64}$ ]] || { echo "bad sha256"; exit 1; }
+          curl -fsSL -o "Phlox-$V.apk" "https://dl.phlox.im/Phlox-$V.apk"
+          echo "$SHA  Phlox-$V.apk" | sha256sum -c -
+          SIGNED=$(keytool -printcert -jarfile "Phlox-$V.apk" | grep -m1 "SHA256:" | awk '{print $2}')
+          [ "$SIGNED" = "$SIGNER" ] || { echo "signing key mismatch: $SIGNED"; exit 1; }
+      - name: Release
+        run: |
+          MB=$(awk "BEGIN { printf \"%.1f\", $(stat -c %s "Phlox-$V.apk") / 1000000 }")
+          cat > notes.md <<NOTES
+          Android 8.0+, 64-bit · $MB MB · https://phlox.im
+
+          **SHA-256** (Phlox-$V.apk):
+          \`\`\`
+          $SHA
+          \`\`\`
+
+          **Signing key** (SHA-256):
+          \`\`\`
+          $SIGNER
+          \`\`\`
+
+          How to check: see the [README](https://github.com/$GITHUB_REPOSITORY#check-the-file).
+          NOTES
+          sed -i 's/^          //' notes.md
+          gh release create "v$V" "Phlox-$V.apk" --repo "$GITHUB_REPOSITORY" --title "Phlox $V" --notes-file notes.md --latest
